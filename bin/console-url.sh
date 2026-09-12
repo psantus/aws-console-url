@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+# aws console-url — open (or print) an AWS Management Console sign-in URL for a profile.
+#
+# Credential handling is fully delegated to the AWS CLI: this script never reads
+# ~/.aws/sso/cache and never calls SSO/STS itself for tokens. It asks the CLI for
+# already-resolved temporary credentials via `aws configure export-credentials`,
+# then performs the standard AWS federation getSigninToken flow.
+#
+# Usage:
+#   console-url.sh <profile> [--print] [--browser <app>] [--no-multi]
+#                            [--region <r>] [--destination <url>] [--duration <sec>]
+#
+# Options:
+#   --print         Print the URL instead of opening a browser.
+#   --browser       Browser app to open the URL in. On macOS this is an app name
+#                   (e.g. "Google Chrome", "Safari", "Firefox"); on Linux it is a
+#                   command on PATH (e.g. "firefox", "google-chrome"). Overrides the
+#                   AWS_CONSOLE_BROWSER env var. Defaults to the system default.
+#   --no-multi      Disable multi-session (account-scoped) routing. By default the
+#                   destination is scoped to the profile's account id so you can be
+#                   signed into multiple accounts at once (up to AWS's limit of 5).
+#   --region        Console home region (default: profile/region or us-east-1).
+#   --destination   Destination URL after sign-in (overrides region/multi handling).
+#   --duration      Federation session duration in seconds. Only honored for IAM
+#                   long-term-key profiles; ignored for SSO/assume-role sessions.
+#
+# Requirements: aws (CLI v2), curl, python3.
+#
+set -euo pipefail
+
+PROFILE="${1:-}"
+if [[ -z "$PROFILE" || "$PROFILE" == "--help" || "$PROFILE" == "-h" ]]; then
+  echo "usage: console-url <profile> [--print] [--browser <app>] [--no-multi] [--region <r>] [--destination <url>] [--duration <sec>]" >&2
+  exit 2
+fi
+shift || true
+
+PRINT_ONLY=0
+REGION=""
+DESTINATION=""
+DURATION=3600
+BROWSER="${AWS_CONSOLE_BROWSER:-}"
+MULTI=1
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --print) PRINT_ONLY=1; shift ;;
+    --browser) BROWSER="${2:?--browser needs a value}"; shift 2 ;;
+    --no-multi) MULTI=0; shift ;;
+    --multi) MULTI=1; shift ;;
+    --region) REGION="${2:?--region needs a value}"; shift 2 ;;
+    --destination) DESTINATION="${2:?--destination needs a value}"; shift 2 ;;
+    --duration) DURATION="${2:?--duration needs a value}"; shift 2 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
+# --- Dependency checks -------------------------------------------------------
+for dep in aws curl python3; do
+  command -v "$dep" >/dev/null 2>&1 || { echo "error: required dependency '$dep' not found on PATH." >&2; exit 1; }
+done
+
+# Resolve region: explicit flag > profile config > us-east-1
+if [[ -z "$REGION" ]]; then
+  REGION="$(aws configure get region --profile "$PROFILE" 2>/dev/null || true)"
+fi
+[[ -z "$REGION" ]] && REGION="us-east-1"
+
+# Build the destination. For multi-session, scope it to the profile's account id
+# (&account=<id>) so multiple accounts get separate console sessions/tabs.
+if [[ -z "$DESTINATION" ]]; then
+  BASE="https://${REGION}.console.aws.amazon.com/console/home?region=${REGION}"
+  if [[ "$MULTI" -eq 1 ]]; then
+    # Account id resolved via the AWS CLI (no direct credential handling here).
+    ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text 2>/dev/null || true)"
+    if [[ -n "$ACCOUNT_ID" && "$ACCOUNT_ID" != "None" ]]; then
+      DESTINATION="${BASE}&account=${ACCOUNT_ID}"
+    else
+      echo "warning: could not resolve account id; opening without multi-session scoping." >&2
+      DESTINATION="$BASE"
+    fi
+  else
+    DESTINATION="$BASE"
+  fi
+fi
+
+# --- Credentials: delegated entirely to the AWS CLI --------------------------
+CREDS_JSON="$(aws configure export-credentials --profile "$PROFILE" --format process)"
+
+read -r AK SK ST <<<"$(printf '%s' "$CREDS_JSON" | python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+print(d["AccessKeyId"], d["SecretAccessKey"], d.get("SessionToken", ""))
+')"
+
+if [[ -z "$ST" ]]; then
+  echo "error: federation requires temporary credentials (a SessionToken); profile \"$PROFILE\" returned long-term keys." >&2
+  echo "       Use an SSO/assume-role profile." >&2
+  exit 1
+fi
+
+# Build the {"sessionId","sessionKey","sessionToken"} JSON the federation endpoint expects.
+SESSION_JSON="$(python3 -c '
+import json, sys
+ak, sk, st = sys.argv[1], sys.argv[2], sys.argv[3]
+print(json.dumps({"sessionId": ak, "sessionKey": sk, "sessionToken": st}))
+' "$AK" "$SK" "$ST")"
+
+FED="https://signin.aws.amazon.com/federation"
+
+# URL-encode a string using python3 (no network) for safe query construction.
+urlencode() { python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"; }
+
+# Step 1: exchange session for a SigninToken. Use curl (system CA trust store).
+# NOTE: SessionDuration is ONLY valid when federating with an IAM user's long-term
+# keys. For temporary credentials (SSO / assume-role, which always carry a
+# SessionToken) it must be omitted, or the endpoint rejects the request.
+GETTOKEN_URL="${FED}?Action=getSigninToken&Session=$(urlencode "$SESSION_JSON")"
+TOKEN_RESPONSE="$(curl -fsS "$GETTOKEN_URL")"
+SIGNIN_TOKEN="$(printf '%s' "$TOKEN_RESPONSE" | python3 -c 'import sys, json; print(json.load(sys.stdin)["SigninToken"])')"
+
+# Step 2: build the login URL.
+LOGIN_URL="${FED}?Action=login&Issuer=$(urlencode "console-url")&Destination=$(urlencode "$DESTINATION")&SigninToken=$(urlencode "$SIGNIN_TOKEN")"
+
+# --- Output / open -----------------------------------------------------------
+open_url() {
+  local url="$1"
+  if [[ -n "$BROWSER" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+      open -a "$BROWSER" "$url"
+    else
+      "$BROWSER" "$url" >/dev/null 2>&1 &
+    fi
+  else
+    if [[ "$(uname)" == "Darwin" ]]; then
+      open "$url"
+    elif command -v xdg-open >/dev/null 2>&1; then
+      xdg-open "$url" >/dev/null 2>&1 &
+    else
+      echo "error: no way to open a browser; use --print and open the URL yourself." >&2
+      return 1
+    fi
+  fi
+}
+
+if [[ "$PRINT_ONLY" -eq 1 ]]; then
+  printf '%s\n' "$LOGIN_URL"
+else
+  open_url "$LOGIN_URL"
+  if [[ -n "$BROWSER" ]]; then
+    echo "Opened AWS Console for profile '$PROFILE' (region $REGION) in $BROWSER." >&2
+  else
+    echo "Opened AWS Console for profile '$PROFILE' (region $REGION)." >&2
+  fi
+fi

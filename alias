@@ -1,0 +1,13 @@
+[toplevel]
+
+# Open (or --print) an AWS Console sign-in URL for a profile.
+# Credentials are resolved by the AWS CLI itself (SSO/assume-role aware);
+# this alias never reads ~/.aws/sso/cache or calls STS directly for tokens.
+#
+#   aws console-url <profile> [--print] [--browser <app>] [--no-multi] [--region <r>]
+#
+# Preferred browser: by default uses your system default browser.
+# To force one, set AWS_CONSOLE_BROWSER (e.g. "Safari", "Google Chrome") or pass --browser.
+#
+# NOTE: the install script rewrites the path below to the absolute install location.
+console-url = !bash "$HOME/.aws/cli/console-url.sh"
