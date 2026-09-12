@@ -1,5 +1,7 @@
 # aws-console-url
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/psantus)
+
 Open the AWS Management Console for any profile straight from your terminal —
 with **multi-session** support — as a native-feeling `aws console` subcommand.
 
@@ -154,6 +156,11 @@ contacts `signin.aws.amazon.com`.
   underlying temporary credentials.
 - macOS and Linux are supported for opening a browser. On other platforms, use
   `--print` and open the URL yourself.
+
+## Support
+
+If this tool saves you time, consider sponsoring its development:
+**[❤ Sponsor @psantus on GitHub](https://github.com/sponsors/psantus)**.
 
 ## License
 
