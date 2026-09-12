@@ -9,5 +9,6 @@
 # Preferred browser: by default uses your system default browser.
 # To force one, set AWS_CONSOLE_BROWSER (e.g. "Safari", "Google Chrome") or pass --browser.
 #
-# NOTE: the install script rewrites the path below to the absolute install location.
+# NOTE: the install script rewrites the paths below to the absolute install location.
 console-url = !bash "$HOME/.aws/cli/console-url.sh"
+console = !bash "$HOME/.aws/cli/console-url.sh"

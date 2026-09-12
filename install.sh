@@ -33,25 +33,27 @@ cp "$SCRIPT_SRC" "$SCRIPT_DST"
 chmod +x "$SCRIPT_DST"
 echo "  • installed ${SCRIPT_DST}"
 
-# 2) Register the alias line, preserving existing [toplevel] content.
-ALIAS_LINE="console-url = !bash \"${SCRIPT_DST}\""
+# 2) Register the alias lines, preserving existing [toplevel] content.
+#    Both `console` (short) and `console-url` (explicit) point at the same script.
+ALIAS_LINE_1="console-url = !bash \"${SCRIPT_DST}\""
+ALIAS_LINE_2="console = !bash \"${SCRIPT_DST}\""
 
 if [[ ! -f "$ALIAS_FILE" ]]; then
-  printf '[toplevel]\n\n%s\n' "$ALIAS_LINE" > "$ALIAS_FILE"
+  printf '[toplevel]\n\n%s\n%s\n' "$ALIAS_LINE_1" "$ALIAS_LINE_2" > "$ALIAS_FILE"
   echo "  • created ${ALIAS_FILE}"
 else
-  # Remove any existing console-url line, then ensure [toplevel] + our line exist.
+  # Remove any existing console/console-url lines, then ensure [toplevel] + our lines exist.
   tmp="$(mktemp)"
-  grep -vE '^[[:space:]]*console-url[[:space:]]*=' "$ALIAS_FILE" > "$tmp" || true
+  grep -vE '^[[:space:]]*console(-url)?[[:space:]]*=' "$ALIAS_FILE" > "$tmp" || true
   if ! grep -qE '^\[toplevel\]' "$tmp"; then
     printf '[toplevel]\n\n' | cat - "$tmp" > "${tmp}.2" && mv "${tmp}.2" "$tmp"
   fi
-  printf '%s\n' "$ALIAS_LINE" >> "$tmp"
+  printf '%s\n%s\n' "$ALIAS_LINE_1" "$ALIAS_LINE_2" >> "$tmp"
   mv "$tmp" "$ALIAS_FILE"
   echo "  • updated ${ALIAS_FILE} (preserved existing aliases)"
 fi
 
 echo
 echo "Done. Try:"
-echo "  aws console-url <profile> --print"
-echo "  aws console-url <profile>"
+echo "  aws console <profile> --print"
+echo "  aws console <profile>"

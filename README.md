@@ -1,13 +1,16 @@
 # aws-console-url
 
 Open the AWS Management Console for any profile straight from your terminal —
-with **multi-session** support — as a native-feeling `aws console-url` subcommand.
+with **multi-session** support — as a native-feeling `aws console` subcommand.
 
 ```bash
-aws console-url terracloud            # opens the console for the profile's account
-aws console-url prod           # opens a second account in its own session
-aws console-url staging --print      # print the sign-in URL instead of opening it
+aws console terracloud            # opens the console for the profile's account
+aws console prod           # opens a second account in its own session
+aws console staging --print      # print the sign-in URL instead of opening it
 ```
+
+> Installed as two aliases pointing at the same script: `aws console` (short) and
+> `aws console-url` (explicit). Use whichever you prefer.
 
 ## Why this exists
 
@@ -50,18 +53,19 @@ cd aws-console-url
 ```
 
 This copies `bin/console-url.sh` to `~/.aws/cli/console-url.sh` and registers the
-`console-url` alias in `~/.aws/cli/alias` (preserving any aliases you already have).
+`console` and `console-url` aliases in `~/.aws/cli/alias` (preserving any aliases
+you already have).
 
 Verify:
 
 ```bash
-aws console-url <your-profile> --print
+aws console <your-profile> --print
 ```
 
 ## Usage
 
 ```
-aws console-url <profile> [options]
+aws console <profile> [options]      # (aws console-url is an equivalent alias)
 
 Options:
   --print          Print the URL instead of opening a browser.
@@ -82,7 +86,7 @@ By default the URL opens in your system default browser. To pin one:
 ```bash
 export AWS_CONSOLE_BROWSER="Safari"     # or "Google Chrome"
 # or per-invocation:
-aws console-url terracloud --browser "Google Chrome"
+aws console terracloud --browser "Google Chrome"
 ```
 
 ## Multi-session
@@ -101,7 +105,7 @@ Use `--no-multi` for the classic single-session behavior.
 ## How credentials flow
 
 ```
-aws console-url <profile>
+aws console <profile>
         │
         ├─ aws configure export-credentials  → temporary creds (CLI does SSO/STS)
         ├─ aws sts get-caller-identity        → account id
