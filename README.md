@@ -48,15 +48,30 @@ the temporary session credentials used for the federation POST.
 
 ## Install
 
+### Option A — download a release (no git needed)
+
 ```bash
-git clone <this-repo> aws-console-url
+curl -fsSL -o aws-console-url.tar.gz \
+  https://github.com/psantus/aws-console-url/releases/latest/download/aws-console-url-1.0.0.tar.gz
+tar xzf aws-console-url.tar.gz
+cd aws-console-url-1.0.0
+./install.sh
+```
+
+Or grab the `.tar.gz` / `.zip` from the
+[Releases page](https://github.com/psantus/aws-console-url/releases).
+
+### Option B — clone the repo
+
+```bash
+git clone https://github.com/psantus/aws-console-url.git
 cd aws-console-url
 ./install.sh
 ```
 
-This copies `bin/console-url.sh` to `~/.aws/cli/console-url.sh` and registers the
-`console` and `console-url` aliases in `~/.aws/cli/alias` (preserving any aliases
-you already have).
+Either way, the installer copies `bin/console-url.sh` to
+`~/.aws/cli/console-url.sh` and registers the `console` and `console-url` aliases
+in `~/.aws/cli/alias` (preserving any aliases you already have).
 
 Verify:
 
