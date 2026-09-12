@@ -1,0 +1,9 @@
+# GitHub sponsor button configuration.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+github: psantus
+
+# Optional extra funding links (uncomment / adjust as needed):
+# custom: ["https://www.terracloud.fr"]
+# ko_fi: USERNAME
+# buy_me_a_coffee: USERNAME
