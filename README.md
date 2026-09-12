@@ -79,6 +79,35 @@ Options:
                    profiles; ignored for SSO/assume-role sessions.
 ```
 
+## Optional shell helpers: `al` / `ap` / `ac`
+
+A small trio of zsh/bash functions for a fast daily workflow ships in
+[`shell/aws-helpers.sh`](./shell/aws-helpers.sh):
+
+| helper | purpose |
+| ------ | ------- |
+| `al`   | **login** — ensure a valid SSO session (idempotent); `al -f` forces login, `al -tmp <profile>` exports temp creds into the shell |
+| `ap`   | **profile** — set the ambient `AWS_PROFILE` (`ap dev-readonly`) |
+| `ac`   | **console** — open the console (`ac <profile>`, or just `ac` after `ap`) |
+
+Enable them by sourcing the file from your `~/.zshrc` (or `~/.bashrc`):
+
+```bash
+source /path/to/aws-console-url/shell/aws-helpers.sh
+export AWS_DEFAULT_SSO_PROFILE="my-sso-profile"   # optional; used by `al`
+```
+
+Typical flow:
+
+```bash
+al                 # make sure you're logged in
+ap dev-readonly         # pick a profile
+ac                 # open its console (uses $AWS_PROFILE)
+ac prod     # ...or open a different one explicitly (multi-session)
+```
+
+`ac` requires the `aws console` subcommand from this repo, so run `./install.sh` first.
+
 ### Preferred browser
 
 By default the URL opens in your system default browser. To pin one:
