@@ -80,6 +80,11 @@ fi
 
 # Build the destination. For multi-session, scope it to the profile's account id
 # (&account=<id>) so multiple accounts get separate console sessions/tabs.
+# Account id, resolved once via the AWS CLI (no direct credential handling here).
+# Used for multi-session scoping and shown in the final message.
+ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text 2>/dev/null || true)"
+[[ "$ACCOUNT_ID" == "None" ]] && ACCOUNT_ID=""
+
 if [[ -z "$DESTINATION" ]]; then
   # Resolve the console path for the requested service (if any).
   #  - most services live at /<service>/home?region=<r>
@@ -104,9 +109,7 @@ if [[ -z "$DESTINATION" ]]; then
   fi
 
   if [[ "$MULTI" -eq 1 ]]; then
-    # Account id resolved via the AWS CLI (no direct credential handling here).
-    ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text 2>/dev/null || true)"
-    if [[ -n "$ACCOUNT_ID" && "$ACCOUNT_ID" != "None" ]]; then
+    if [[ -n "$ACCOUNT_ID" ]]; then
       # Append account with the right separator depending on existing query string.
       if [[ "$BASE" == *\?* ]]; then DESTINATION="${BASE}&account=${ACCOUNT_ID}"
       else DESTINATION="${BASE}?account=${ACCOUNT_ID}"; fi
@@ -184,9 +187,11 @@ else
   open_url "$LOGIN_URL"
   WHAT="AWS Console"
   [[ -n "$SERVICE" ]] && WHAT="AWS $SERVICE console"
+  ACCT=""
+  [[ -n "$ACCOUNT_ID" ]] && ACCT=" account $ACCOUNT_ID"
   if [[ -n "$BROWSER" ]]; then
-    echo "Opened $WHAT for profile '$PROFILE' (region $REGION) in $BROWSER." >&2
+    echo "Opened $WHAT for profile '$PROFILE'$ACCT (region $REGION) in $BROWSER." >&2
   else
-    echo "Opened $WHAT for profile '$PROFILE' (region $REGION)." >&2
+    echo "Opened $WHAT for profile '$PROFILE'$ACCT (region $REGION)." >&2
   fi
 fi
