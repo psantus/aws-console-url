@@ -174,6 +174,12 @@ open_url() {
       open "$url"
     elif command -v xdg-open >/dev/null 2>&1; then
       xdg-open "$url" >/dev/null 2>&1 &
+    elif command -v wslview >/dev/null 2>&1; then
+      # WSL (wslu package): opens in the Windows default browser.
+      wslview "$url" >/dev/null 2>&1 &
+    elif command -v cmd.exe >/dev/null 2>&1; then
+      # WSL / Git Bash: hand the URL to Windows' shell.
+      cmd.exe /c start "" "$url" >/dev/null 2>&1 &
     else
       echo "error: no way to open a browser; use --print and open the URL yourself." >&2
       return 1

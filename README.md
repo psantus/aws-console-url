@@ -207,8 +207,11 @@ contacts `signin.aws.amazon.com`.
   keys. For SSO/assume-role sessions (which already carry a session token) it must
   be omitted, so `--duration` is ignored for those — the session length follows the
   underlying temporary credentials.
-- macOS and Linux are supported for opening a browser. On other platforms, use
-  `--print` and open the URL yourself.
+- Opening a browser is supported on **macOS** (`open`), **Linux** (`xdg-open`), and
+  **WSL / Git Bash on Windows** (`wslview` or `cmd.exe start`). URL generation
+  (`--print`) is fully OS-agnostic — on any other platform, use `--print` and open
+  the URL yourself. The `al`/`ap`/`ac` helpers and completion target bash/zsh
+  (macOS, Linux, WSL, Git Bash); they are not available in native PowerShell/cmd.
 
 ## Support
 
