@@ -82,18 +82,34 @@ aws console <your-profile> --print
 ## Usage
 
 ```
-aws console <profile> [options]      # (aws console-url is an equivalent alias)
+aws console <profile> [service] [options]   # (aws console-url is an equivalent alias)
+
+Arguments:
+  service          Optional. Open a service deep-link instead of the console home,
+                   e.g. `aws console myprofile ec2`. Same as --service.
 
 Options:
+  --service <name> Service to deep-link into (ec2, lambda, s3, rds, dynamodb, iam,
+                   vpc, ecs, cloudformation, cloudwatch, sns, sqs, stepfunctions, …).
+                   Most map to /<service>/home; s3/iam/route53/billing are global and
+                   stepfunctions maps to /states. Use --destination for anything else.
   --print          Print the URL instead of opening a browser.
   --browser <app>  Browser to open in. macOS: an app name ("Safari",
                    "Google Chrome"); Linux: a command on PATH ("firefox").
                    Overrides $AWS_CONSOLE_BROWSER. Defaults to the system default.
   --no-multi       Disable multi-session (account-scoped) routing.
   --region <r>     Console home region (default: profile region, else us-east-1).
-  --destination <url>  Custom post-sign-in destination (overrides region/multi).
+  --destination <url>  Custom post-sign-in destination (overrides region/service/multi).
   --duration <sec> Federation session duration. Only honored for IAM long-term-key
                    profiles; ignored for SSO/assume-role sessions.
+```
+
+Examples:
+
+```bash
+aws console prod ec2            # open the EC2 console for the "prod" profile
+aws console prod s3 --print     # print an S3 (global) console sign-in URL
+aws console prod --service rds  # same as the positional form
 ```
 
 ## Optional shell helpers: `al` / `ap` / `ac`
@@ -124,6 +140,28 @@ ac prod     # ...or open a different one explicitly (multi-session)
 ```
 
 `ac` requires the `aws console` subcommand from this repo, so run `./install.sh` first.
+
+### Tab-completion (zsh)
+
+A zsh completer for `ac` ships in [`shell/completion.zsh`](./shell/completion.zsh).
+It completes profile names (live, from `aws configure list-profiles`), common
+service names, and flags. Source it from your `~/.zshrc` **after** `compinit`:
+
+```bash
+autoload -Uz compinit && compinit          # usually already in your ~/.zshrc
+source /path/to/aws-console-url/shell/completion.zsh
+```
+
+Then:
+
+```bash
+ac ta<TAB>              # → dev-readonly  dev-admin  dev-admin  …
+ac myprofile e<TAB>     # → ec2  ecs  ecr  efs  events  …
+```
+
+It completes the `ac` function and a standalone `console-url` command. It does not
+complete the `aws console` alias form (the AWS CLI drives its own completer and
+treats alias arguments as opaque).
 
 ### Preferred browser
 

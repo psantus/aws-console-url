@@ -8,10 +8,16 @@
 # then performs the standard AWS federation getSigninToken flow.
 #
 # Usage:
-#   console-url.sh <profile> [--print] [--browser <app>] [--no-multi]
-#                            [--region <r>] [--destination <url>] [--duration <sec>]
+#   console-url.sh <profile> [service] [--print] [--browser <app>] [--no-multi]
+#                            [--service <name>] [--region <r>] [--destination <url>]
+#                            [--duration <sec>]
 #
 # Options:
+#   [service]       Optional 2nd positional: open a service deep-link instead of the
+#                   console home, e.g. `console-url myprofile ec2`. Same as --service.
+#   --service       Service to deep-link into (e.g. ec2, lambda, s3, rds, dynamodb).
+#                   Most services resolve to /<service>/home; a few special cases are
+#                   mapped (s3, iam, stepfunctions). Use --destination for anything else.
 #   --print         Print the URL instead of opening a browser.
 #   --browser       Browser app to open the URL in. On macOS this is an app name
 #                   (e.g. "Google Chrome", "Safari", "Firefox"); on Linux it is a
@@ -21,7 +27,7 @@
 #                   destination is scoped to the profile's account id so you can be
 #                   signed into multiple accounts at once (up to AWS's limit of 5).
 #   --region        Console home region (default: profile/region or us-east-1).
-#   --destination   Destination URL after sign-in (overrides region/multi handling).
+#   --destination   Destination URL after sign-in (overrides region/service/multi).
 #   --duration      Federation session duration in seconds. Only honored for IAM
 #                   long-term-key profiles; ignored for SSO/assume-role sessions.
 #
@@ -31,7 +37,7 @@ set -euo pipefail
 
 PROFILE="${1:-}"
 if [[ -z "$PROFILE" || "$PROFILE" == "--help" || "$PROFILE" == "-h" ]]; then
-  echo "usage: console-url <profile> [--print] [--browser <app>] [--no-multi] [--region <r>] [--destination <url>] [--duration <sec>]" >&2
+  echo "usage: console-url <profile> [service] [--print] [--browser <app>] [--no-multi] [--service <name>] [--region <r>] [--destination <url>] [--duration <sec>]" >&2
   exit 2
 fi
 shift || true
@@ -42,6 +48,10 @@ DESTINATION=""
 DURATION=3600
 BROWSER="${AWS_CONSOLE_BROWSER:-}"
 MULTI=1
+SERVICE=""
+
+# Optional 2nd positional argument = service (if it doesn't look like an option).
+if [[ -n "${1:-}" && "$1" != -* ]]; then SERVICE="$1"; shift; fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +59,7 @@ while [[ $# -gt 0 ]]; do
     --browser) BROWSER="${2:?--browser needs a value}"; shift 2 ;;
     --no-multi) MULTI=0; shift ;;
     --multi) MULTI=1; shift ;;
+    --service) SERVICE="${2:?--service needs a value}"; shift 2 ;;
     --region) REGION="${2:?--region needs a value}"; shift 2 ;;
     --destination) DESTINATION="${2:?--destination needs a value}"; shift 2 ;;
     --duration) DURATION="${2:?--duration needs a value}"; shift 2 ;;
@@ -70,12 +81,35 @@ fi
 # Build the destination. For multi-session, scope it to the profile's account id
 # (&account=<id>) so multiple accounts get separate console sessions/tabs.
 if [[ -z "$DESTINATION" ]]; then
-  BASE="https://${REGION}.console.aws.amazon.com/console/home?region=${REGION}"
+  # Resolve the console path for the requested service (if any).
+  #  - most services live at /<service>/home?region=<r>
+  #  - a few use a different console slug or are global (region-less)
+  GLOBAL=0
+  if [[ -n "$SERVICE" ]]; then
+    case "$SERVICE" in
+      s3)             SVC_PATH="s3"; GLOBAL=1 ;;              # S3 console is global
+      iam)            SVC_PATH="iam"; GLOBAL=1 ;;             # IAM is global
+      route53|r53)    SVC_PATH="route53/v2"; GLOBAL=1 ;;      # Route 53 is global
+      billing|cost)   SVC_PATH="billing"; GLOBAL=1 ;;
+      stepfunctions|sfn) SVC_PATH="states" ;;                # Step Functions -> states
+      *)              SVC_PATH="$SERVICE" ;;                  # generic: /<service>/home
+    esac
+    if [[ "$GLOBAL" -eq 1 ]]; then
+      BASE="https://console.aws.amazon.com/${SVC_PATH}/home"
+    else
+      BASE="https://${REGION}.console.aws.amazon.com/${SVC_PATH}/home?region=${REGION}"
+    fi
+  else
+    BASE="https://${REGION}.console.aws.amazon.com/console/home?region=${REGION}"
+  fi
+
   if [[ "$MULTI" -eq 1 ]]; then
     # Account id resolved via the AWS CLI (no direct credential handling here).
     ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text 2>/dev/null || true)"
     if [[ -n "$ACCOUNT_ID" && "$ACCOUNT_ID" != "None" ]]; then
-      DESTINATION="${BASE}&account=${ACCOUNT_ID}"
+      # Append account with the right separator depending on existing query string.
+      if [[ "$BASE" == *\?* ]]; then DESTINATION="${BASE}&account=${ACCOUNT_ID}"
+      else DESTINATION="${BASE}?account=${ACCOUNT_ID}"; fi
     else
       echo "warning: could not resolve account id; opening without multi-session scoping." >&2
       DESTINATION="$BASE"
@@ -148,9 +182,11 @@ if [[ "$PRINT_ONLY" -eq 1 ]]; then
   printf '%s\n' "$LOGIN_URL"
 else
   open_url "$LOGIN_URL"
+  WHAT="AWS Console"
+  [[ -n "$SERVICE" ]] && WHAT="AWS $SERVICE console"
   if [[ -n "$BROWSER" ]]; then
-    echo "Opened AWS Console for profile '$PROFILE' (region $REGION) in $BROWSER." >&2
+    echo "Opened $WHAT for profile '$PROFILE' (region $REGION) in $BROWSER." >&2
   else
-    echo "Opened AWS Console for profile '$PROFILE' (region $REGION)." >&2
+    echo "Opened $WHAT for profile '$PROFILE' (region $REGION)." >&2
   fi
 fi

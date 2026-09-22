@@ -42,4 +42,10 @@ if command -v curl >/dev/null 2>&1; then
   [[ "$code" == "302" ]] && pass "HTTP 302 from federation endpoint" || echo "  SKIP/NOTE: got HTTP $code (creds may be expired)"
 fi
 
+echo "6) service deep-link (positional + --service)"
+surl="$(bash "$SCRIPT" "$PROFILE" ec2 --print)"
+echo "$surl" | grep -q 'ec2%2Fhome' && pass "positional service -> /ec2/home" || fail "service deep-link not applied (positional)"
+surl2="$(bash "$SCRIPT" "$PROFILE" --service lambda --print)"
+echo "$surl2" | grep -q 'lambda%2Fhome' && pass "--service lambda -> /lambda/home" || fail "service deep-link not applied (--service)"
+
 echo "All checks completed."
