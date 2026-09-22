@@ -2,6 +2,8 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/psantus)
 
+📝 Blog post: [English](https://dev.to/aws-builders/aws-console-open-the-aws-console-from-your-terminal-in-one-command-41d7) · [Français](https://dev.to/aws-builders/aws-console-ouvrir-la-console-aws-depuis-le-terminal-en-une-commande-hkn)
+
 Open the AWS Management Console for any profile straight from your terminal —
 with **multi-session** support — as a native-feeling `aws console` subcommand.
 
