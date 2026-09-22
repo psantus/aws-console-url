@@ -52,7 +52,7 @@ the temporary session credentials used for the federation POST.
 
 ```bash
 curl -fsSL -o aws-console-url.tar.gz \
-  https://github.com/psantus/aws-console-url/releases/latest/download/aws-console-url-1.1.0.tar.gz
+  https://github.com/psantus/aws-console-url/archive/refs/tags/v1.1.0.tar.gz
 tar xzf aws-console-url.tar.gz
 cd aws-console-url-1.1.0
 ./install.sh
