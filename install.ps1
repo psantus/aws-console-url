@@ -66,27 +66,55 @@ if (Test-Path $complSrc) {
     $complDst = Join-Path $InstallDir "completion.ps1"
     Copy-Item $complSrc $complDst -Force
 
-    # Ensure the $PROFILE file exists (resolve the real path of THIS session).
-    if (-not (Test-Path $PROFILE)) {
-        New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+    # Resolve the profile path deterministically. Inside a script invoked with
+    # `& script.ps1`, the automatic $PROFILE can be empty/unreliable, so we
+    # rebuild it from the user's Documents folder (WindowsPowerShell host).
+    $profilePath = $PROFILE
+    if (-not $profilePath) {
+        $docs = [Environment]::GetFolderPath('MyDocuments')
+        $profilePath = Join-Path $docs "WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
     }
+    $profileDir = Split-Path -Parent $profilePath
+    if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory -Force -Path $profileDir | Out-Null }
+    if (-not (Test-Path $profilePath)) { New-Item -ItemType File -Force -Path $profilePath | Out-Null }
+
     $marker = "# aws-console-url helper (awsc)"
-    $block = @(
-        "",
+    $blockLines = @(
         $marker,
         "`$env:AWS_CONSOLE_URL_SCRIPT = `"$dst`"",
         ". `"$complDst`""
-    ) -join "`r`n"
+    )
 
-    $existing = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
-    if ($existing -notlike "*$marker*") {
-        Add-Content -Path $PROFILE -Value $block -Encoding utf8
+    # Idempotent: remove any previous aws-console-url block (marker + the two
+    # lines that reference our install dir), then append a fresh one. Re-running
+    # the installer — even with a different version/path — leaves exactly one
+    # correct block.
+    $kept = New-Object System.Collections.Generic.List[string]
+    foreach ($l in (Get-Content $profilePath -ErrorAction SilentlyContinue)) {
+        if ($l -match [regex]::Escape($marker)) { continue }
+        if ($l -match 'AWS_CONSOLE_URL_SCRIPT') { continue }
+        if ($l -match 'aws-console-url\\completion\.ps1') { continue }
+        $kept.Add($l)
     }
-    # Verify the block is actually present in THIS session's profile.
-    if ((Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue) -like "*$marker*") {
-        Write-Host "  - 'awsc' + completion installed in $PROFILE"
+    # Drop trailing blank lines for a clean file.
+    while ($kept.Count -gt 0 -and -not $kept[$kept.Count - 1].Trim()) { $kept.RemoveAt($kept.Count - 1) }
+    $out = New-Object System.Collections.Generic.List[string]
+    foreach ($l in $kept) { $out.Add($l) }
+    $out.Add("")
+    foreach ($l in $blockLines) { $out.Add($l) }
+    # ASCII avoids the UTF-8 BOM that PowerShell 5.1 prepends (which breaks both
+    # dot-sourcing of the profile and the marker check below).
+    Set-Content -Path $profilePath -Value $out -Encoding ascii
+
+    # Verify (line-by-line, BOM-insensitive).
+    $ok = $false
+    foreach ($l in (Get-Content $profilePath -ErrorAction SilentlyContinue)) {
+        if ($l -match [regex]::Escape($marker)) { $ok = $true; break }
+    }
+    if ($ok) {
+        Write-Host "  - 'awsc' + completion installed in $profilePath"
     } else {
-        Write-Warning "Could not write to `$PROFILE ($PROFILE). Add these two lines manually:"
+        Write-Warning "Could not write to the PowerShell profile ($profilePath). Add these two lines manually:"
         Write-Host "    `$env:AWS_CONSOLE_URL_SCRIPT = `"$dst`""
         Write-Host "    . `"$complDst`""
     }
