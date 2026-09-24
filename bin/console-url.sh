@@ -123,7 +123,11 @@ if [[ -z "$DESTINATION" ]]; then
 fi
 
 # --- Credentials: delegated entirely to the AWS CLI --------------------------
-CREDS_JSON="$(aws configure export-credentials --profile "$PROFILE" --format process)"
+if ! CREDS_JSON="$(aws configure export-credentials --profile "$PROFILE" --format process 2>/dev/null)"; then
+  echo "Not signed in for profile '$PROFILE' (or the session has expired)." >&2
+  echo "Run:  aws sso login --profile $PROFILE" >&2
+  exit 1
+fi
 
 read -r AK SK ST <<<"$(printf '%s' "$CREDS_JSON" | python3 -c '
 import sys, json

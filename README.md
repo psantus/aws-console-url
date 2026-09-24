@@ -90,10 +90,10 @@ On Windows, use the PowerShell port. In a PowerShell session, paste these lines
 $ErrorActionPreference = 'Stop'
 $zip = "$env:TEMP\acu.zip"
 $dir = "$env:TEMP\acu"
-Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.5.zip -OutFile $zip
+Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.6.zip -OutFile $zip
 Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
 Expand-Archive $zip $dir -Force
-& "$dir\aws-console-url-1.2.5\install.ps1"
+& "$dir\aws-console-url-1.2.6\install.ps1"
 ```
 
 Then use it exactly like on macOS/Linux:

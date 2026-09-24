@@ -69,8 +69,15 @@ if (-not $Region) {
 }
 if (-not $Region) { $Region = "us-east-1" }
 
-# Account id, resolved once via the AWS CLI (delegated; no direct cred handling).
-$AccountId = (& $awsCmd sts get-caller-identity --profile $AwsProfile --query Account --output text 2>$null)
+# Verify we have a usable session for this profile. Capture stdout+stderr so a
+# native-command error surface as a clean message, not a PowerShell stack trace.
+$whoAmI = & $awsCmd sts get-caller-identity --profile $AwsProfile --query Account --output text 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Not signed in for profile '$AwsProfile' (or the session has expired)." -ForegroundColor Yellow
+    Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
+    exit 1
+}
+$AccountId = "$whoAmI".Trim()
 if ($AccountId -eq "None") { $AccountId = "" }
 
 # Build the destination.
@@ -102,8 +109,17 @@ if (-not $Destination) {
 }
 
 # --- Credentials: delegated entirely to the AWS CLI ---
-$credsJson = & $awsCmd configure export-credentials --profile $AwsProfile --format process
-$creds = $credsJson | ConvertFrom-Json
+$credsJson = & $awsCmd configure export-credentials --profile $AwsProfile --format process 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Could not obtain credentials for profile '$AwsProfile'." -ForegroundColor Yellow
+    Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
+    exit 1
+}
+try { $creds = "$credsJson" | ConvertFrom-Json } catch {
+    Write-Host "Could not parse credentials for profile '$AwsProfile'." -ForegroundColor Yellow
+    Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
+    exit 1
+}
 if (-not $creds.SessionToken) {
     Write-Error "federation requires temporary credentials (a SessionToken); profile '$AwsProfile' returned long-term keys. Use an SSO/assume-role profile."
     exit 1
