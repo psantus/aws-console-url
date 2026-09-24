@@ -7,3 +7,6 @@
 
 # Local scratch
 *.log
+
+# Local comms/assets, never publish
+com (don*
