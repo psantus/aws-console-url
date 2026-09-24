@@ -83,11 +83,17 @@ aws console <your-profile> --print
 
 ### Windows (PowerShell)
 
-On Windows, use the PowerShell port. In a PowerShell session, run this single
-command — it downloads the release and installs the `aws console` alias:
+On Windows, use the PowerShell port. In a PowerShell session, paste these lines
+(each command is complete on its own line, which pastes reliably into a console):
 
 ```powershell
-$ErrorActionPreference='Stop'; $z="$env:TEMP\acu.zip"; $d="$env:TEMP\acu"; Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.1.zip -OutFile $z; Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive $z $d -Force; & "$d\aws-console-url-1.2.1\install.ps1"
+$ErrorActionPreference = 'Stop'
+$zip = "$env:TEMP\acu.zip"
+$dir = "$env:TEMP\acu"
+Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.1.zip -OutFile $zip
+Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive $zip $dir -Force
+& "$dir\aws-console-url-1.2.1\install.ps1"
 ```
 
 Then use it exactly like on macOS/Linux:
