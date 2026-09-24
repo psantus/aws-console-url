@@ -37,7 +37,7 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Position = 0)][string]$Profile,
+    [Parameter(Position = 0)][string]$AwsProfile,
     [Parameter(Position = 1)][string]$Service,
     [switch]$Print,
     [switch]$NoMulti,
@@ -57,20 +57,20 @@ if (-not $awsCmd) {
 }
 
 # Profile: explicit arg, else $env:AWS_PROFILE.
-if (-not $Profile) { $Profile = $env:AWS_PROFILE }
-if (-not $Profile) {
+if (-not $AwsProfile) { $AwsProfile = $env:AWS_PROFILE }
+if (-not $AwsProfile) {
     Write-Error "usage: Open-AwsConsole <profile> [service] [-Print] [-NoMulti] [-Region r] [-Destination url]"
     exit 2
 }
 
 # Region: explicit flag > profile config > us-east-1.
 if (-not $Region) {
-    $Region = (& $awsCmd configure get region --profile $Profile 2>$null)
+    $Region = (& $awsCmd configure get region --profile $AwsProfile 2>$null)
 }
 if (-not $Region) { $Region = "us-east-1" }
 
 # Account id, resolved once via the AWS CLI (delegated; no direct cred handling).
-$AccountId = (& $awsCmd sts get-caller-identity --profile $Profile --query Account --output text 2>$null)
+$AccountId = (& $awsCmd sts get-caller-identity --profile $AwsProfile --query Account --output text 2>$null)
 if ($AccountId -eq "None") { $AccountId = "" }
 
 # Build the destination.
@@ -102,10 +102,10 @@ if (-not $Destination) {
 }
 
 # --- Credentials: delegated entirely to the AWS CLI ---
-$credsJson = & $awsCmd configure export-credentials --profile $Profile --format process
+$credsJson = & $awsCmd configure export-credentials --profile $AwsProfile --format process
 $creds = $credsJson | ConvertFrom-Json
 if (-not $creds.SessionToken) {
-    Write-Error "federation requires temporary credentials (a SessionToken); profile '$Profile' returned long-term keys. Use an SSO/assume-role profile."
+    Write-Error "federation requires temporary credentials (a SessionToken); profile '$AwsProfile' returned long-term keys. Use an SSO/assume-role profile."
     exit 1
 }
 
@@ -135,5 +135,5 @@ else {
     Start-Process $loginUrl
     $what = if ($Service) { "AWS $Service console" } else { "AWS Console" }
     $acct = if ($AccountId) { " account $AccountId" } else { "" }
-    Write-Host "Opened $what for profile '$Profile'$acct (region $Region)."
+    Write-Host "Opened $what for profile '$AwsProfile'$acct (region $Region)."
 }
