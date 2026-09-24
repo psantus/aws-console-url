@@ -23,23 +23,35 @@ function awsc {
         Write-Error "Open-AwsConsole.ps1 not found (AWS_CONSOLE_URL_SCRIPT). Re-run install.ps1."
         return
     }
-    & $script $AwsProfile $Service @Rest
+    # Build the argument list, omitting empty values (passing $null would bind as a
+    # bogus positional argument to the target script).
+    $argList = @($AwsProfile)
+    if ($Service) { $argList += $Service }
+    if ($Rest)    { $argList += $Rest }
+    & $script @argList
 }
 
 # Complete profile names (live from the AWS CLI config).
 Register-ArgumentCompleter -CommandName awsc -ParameterName AwsProfile -ScriptBlock {
     param($commandName, $parameterName, $wordToComplete)
-    (& aws configure list-profiles 2>$null) |
-        Where-Object { $_ -like "$wordToComplete*" } |
-        ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+    try {
+        $w = [regex]::Escape($wordToComplete)
+        (& aws configure list-profiles 2>$null) |
+            Where-Object { $_ -match "^$w" } |
+            Sort-Object |
+            ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+    } catch { }
 }
 
 # Complete common service names.
 Register-ArgumentCompleter -CommandName awsc -ParameterName Service -ScriptBlock {
     param($commandName, $parameterName, $wordToComplete)
-    @('ec2','s3','lambda','rds','dynamodb','iam','vpc','ecs','ecr','eks',
-      'cloudformation','cloudwatch','logs','sns','sqs','kms','secretsmanager',
-      'ssm','apigateway','route53','cloudfront','stepfunctions','athena','glue') |
-        Where-Object { $_ -like "$wordToComplete*" } |
-        ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+    try {
+        $w = [regex]::Escape($wordToComplete)
+        @('ec2','s3','lambda','rds','dynamodb','iam','vpc','ecs','ecr','eks',
+          'cloudformation','cloudwatch','logs','sns','sqs','kms','secretsmanager',
+          'ssm','apigateway','route53','cloudfront','stepfunctions','athena','glue') |
+            Where-Object { $_ -match "^$w" } |
+            ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
+    } catch { }
 }
