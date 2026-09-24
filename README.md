@@ -75,6 +75,25 @@ Either way, the installer copies `bin/console-url.sh` to
 `~/.aws/cli/console-url.sh` and registers the `console` and `console-url` aliases
 in `~/.aws/cli/alias` (preserving any aliases you already have).
 
+### Windows (PowerShell)
+
+On Windows, use the PowerShell port. In a PowerShell session, run this single
+command — it downloads the release and installs the `aws console` alias:
+
+```powershell
+$ErrorActionPreference='Stop'; $z="$env:TEMP\acu.zip"; $d="$env:TEMP\acu"; Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.0.zip -OutFile $z; Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive $z $d -Force; & "$d\aws-console-url-1.2.0\install.ps1"
+```
+
+Then use it exactly like on macOS/Linux:
+
+```powershell
+aws console <your-profile> --print
+aws console <your-profile> ec2
+```
+
+Requirements on Windows: AWS CLI v2 and Windows PowerShell 5.1+ (both present by
+default on modern Windows). Credentials are still fully delegated to the AWS CLI.
+
 Verify:
 
 ```bash
