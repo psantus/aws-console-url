@@ -58,7 +58,40 @@ foreach ($l in $lines) { if ($l.Trim()) { $final.Add($l) } }
 Set-Content -Path $aliasFile -Value $final -Encoding ascii
 Write-Host "  - registered 'aws console' in $aliasFile"
 
+# 3) Install the `awsc` PowerShell helper + tab-completion into the user's
+#    $PROFILE. `aws console` (the CLI alias) cannot be completed, so `awsc`
+#    provides the tab-completable equivalent (profiles + services).
+$complSrc = Join-Path $scriptDir "shell\completion.ps1"
+if (Test-Path $complSrc) {
+    $complDst = Join-Path $InstallDir "completion.ps1"
+    Copy-Item $complSrc $complDst -Force
+
+    # Ensure the $PROFILE file exists (resolve the real path of THIS session).
+    if (-not (Test-Path $PROFILE)) {
+        New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+    }
+    $marker = "# aws-console-url helper (awsc)"
+    $block = @(
+        "",
+        $marker,
+        "`$env:AWS_CONSOLE_URL_SCRIPT = `"$dst`"",
+        ". `"$complDst`""
+    ) -join "`r`n"
+
+    $existing = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
+    if ($existing -notlike "*$marker*") {
+        Add-Content -Path $PROFILE -Value $block -Encoding utf8
+        Write-Host "  - added 'awsc' + completion to $PROFILE"
+    } else {
+        Write-Host "  - 'awsc' already present in $PROFILE (left as-is)"
+    }
+}
+
 Write-Host ""
 Write-Host "Done. Try:"
 Write-Host "  aws console <your-profile> --print"
 Write-Host "  aws console <your-profile> ec2"
+Write-Host ""
+Write-Host "For tab-completion, open a NEW PowerShell and use 'awsc':"
+Write-Host "  awsc <TAB>            # completes profiles"
+Write-Host "  awsc myprofile <TAB>  # completes services"

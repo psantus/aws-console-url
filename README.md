@@ -75,13 +75,19 @@ Either way, the installer copies `bin/console-url.sh` to
 `~/.aws/cli/console-url.sh` and registers the `console` and `console-url` aliases
 in `~/.aws/cli/alias` (preserving any aliases you already have).
 
+Verify:
+
+```bash
+aws console <your-profile> --print
+```
+
 ### Windows (PowerShell)
 
 On Windows, use the PowerShell port. In a PowerShell session, run this single
 command — it downloads the release and installs the `aws console` alias:
 
 ```powershell
-$ErrorActionPreference='Stop'; $z="$env:TEMP\acu.zip"; $d="$env:TEMP\acu"; Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.0.zip -OutFile $z; Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive $z $d -Force; & "$d\aws-console-url-1.2.0\install.ps1"
+$ErrorActionPreference='Stop'; $z="$env:TEMP\acu.zip"; $d="$env:TEMP\acu"; Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.1.zip -OutFile $z; Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive $z $d -Force; & "$d\aws-console-url-1.2.1\install.ps1"
 ```
 
 Then use it exactly like on macOS/Linux:
@@ -94,10 +100,15 @@ aws console <your-profile> ec2
 Requirements on Windows: AWS CLI v2 and Windows PowerShell 5.1+ (both present by
 default on modern Windows). Credentials are still fully delegated to the AWS CLI.
 
-Verify:
+**Tab-completion:** `aws console` itself can't be completed (the AWS CLI treats
+alias arguments as opaque). The installer therefore also adds an `awsc` function
+to your `$PROFILE` that *is* completable (`ac` is a reserved PowerShell alias for
+`Add-Content`, hence `awsc`). Open a **new** PowerShell after installing:
 
-```bash
-aws console <your-profile> --print
+```powershell
+awsc <TAB>              # completes profile names
+awsc myprofile <TAB>    # completes service names
+awsc myprofile ec2      # same behaviour as `aws console myprofile ec2`
 ```
 
 ## Usage
