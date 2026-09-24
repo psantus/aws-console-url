@@ -81,9 +81,14 @@ if (Test-Path $complSrc) {
     $existing = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
     if ($existing -notlike "*$marker*") {
         Add-Content -Path $PROFILE -Value $block -Encoding utf8
-        Write-Host "  - added 'awsc' + completion to $PROFILE"
+    }
+    # Verify the block is actually present in THIS session's profile.
+    if ((Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue) -like "*$marker*") {
+        Write-Host "  - 'awsc' + completion installed in $PROFILE"
     } else {
-        Write-Host "  - 'awsc' already present in $PROFILE (left as-is)"
+        Write-Warning "Could not write to `$PROFILE ($PROFILE). Add these two lines manually:"
+        Write-Host "    `$env:AWS_CONSOLE_URL_SCRIPT = `"$dst`""
+        Write-Host "    . `"$complDst`""
     }
 }
 
