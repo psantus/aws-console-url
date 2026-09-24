@@ -56,6 +56,21 @@ if (-not $awsCmd) {
     else { Write-Error "AWS CLI not found on PATH."; exit 1 }
 }
 
+# Run the AWS CLI capturing stdout, swallowing stderr, and returning the exit
+# code — WITHOUT letting a native stderr write turn into a PowerShell error
+# (which would print a NativeCommandError stack trace under -ErrorAction Stop).
+function Invoke-Aws {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$AwsArgs)
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $out = & $awsCmd @AwsArgs 2>$null
+        return [pscustomobject]@{ Ok = ($LASTEXITCODE -eq 0); Output = ($out -join "`n").Trim() }
+    } finally {
+        $ErrorActionPreference = $old
+    }
+}
+
 # Profile: explicit arg, else $env:AWS_PROFILE.
 if (-not $AwsProfile) { $AwsProfile = $env:AWS_PROFILE }
 if (-not $AwsProfile) {
@@ -65,19 +80,19 @@ if (-not $AwsProfile) {
 
 # Region: explicit flag > profile config > us-east-1.
 if (-not $Region) {
-    $Region = (& $awsCmd configure get region --profile $AwsProfile 2>$null)
+    $r = Invoke-Aws configure get region --profile $AwsProfile
+    if ($r.Ok) { $Region = $r.Output }
 }
 if (-not $Region) { $Region = "us-east-1" }
 
-# Verify we have a usable session for this profile. Capture stdout+stderr so a
-# native-command error surface as a clean message, not a PowerShell stack trace.
-$whoAmI = & $awsCmd sts get-caller-identity --profile $AwsProfile --query Account --output text 2>&1
-if ($LASTEXITCODE -ne 0) {
+# Verify we have a usable session for this profile.
+$who = Invoke-Aws sts get-caller-identity --profile $AwsProfile --query Account --output text
+if (-not $who.Ok) {
     Write-Host "Not signed in for profile '$AwsProfile' (or the session has expired)." -ForegroundColor Yellow
     Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
     exit 1
 }
-$AccountId = "$whoAmI".Trim()
+$AccountId = $who.Output
 if ($AccountId -eq "None") { $AccountId = "" }
 
 # Build the destination.
@@ -109,13 +124,13 @@ if (-not $Destination) {
 }
 
 # --- Credentials: delegated entirely to the AWS CLI ---
-$credsJson = & $awsCmd configure export-credentials --profile $AwsProfile --format process 2>&1
-if ($LASTEXITCODE -ne 0) {
+$credsResult = Invoke-Aws configure export-credentials --profile $AwsProfile --format process
+if (-not $credsResult.Ok) {
     Write-Host "Could not obtain credentials for profile '$AwsProfile'." -ForegroundColor Yellow
     Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
     exit 1
 }
-try { $creds = "$credsJson" | ConvertFrom-Json } catch {
+try { $creds = $credsResult.Output | ConvertFrom-Json } catch {
     Write-Host "Could not parse credentials for profile '$AwsProfile'." -ForegroundColor Yellow
     Write-Host "Run:  aws sso login --profile $AwsProfile" -ForegroundColor Yellow
     exit 1
