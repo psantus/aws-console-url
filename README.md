@@ -43,27 +43,37 @@ the temporary session credentials used for the federation POST.
 ## Requirements
 
 - [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-  (needs `aws configure export-credentials`)
-- `curl` and `python3` (both preinstalled on macOS and most Linux distros)
+  (needs `aws configure export-credentials`). Per-OS tooling is listed under
+  [Install](#install).
 - Profiles configured for AWS IAM Identity Center (SSO) or assume-role — i.e.
   profiles that yield **temporary** credentials with a session token.
 
 ## Install
 
-### Option A — download a release (no git needed)
+Pick your platform below. Whichever you choose, the installer registers an
+`aws console` subcommand that works the same everywhere.
+
+| Platform | Shell | `aws console` | Tab-completion helper |
+| -------- | ----- | :-----------: | --------------------- |
+| macOS | zsh / bash | ✅ | `ac` (zsh) |
+| Linux | bash / zsh | ✅ | `ac` (zsh) |
+| Windows | PowerShell 5.1+ | ✅ | `awsc` |
+| WSL / Git Bash | bash | ✅ | `ac` |
+
+<details open>
+<summary><b>🍎 macOS / 🐧 Linux</b></summary>
+
+**Requirements:** AWS CLI v2, `curl`, `python3` (curl & python3 ship by default).
+
+Download a release (no git needed):
 
 ```bash
-curl -fsSL -o aws-console-url.tar.gz \
-  https://github.com/psantus/aws-console-url/archive/refs/tags/v1.1.0.tar.gz
-tar xzf aws-console-url.tar.gz
-cd aws-console-url-1.1.0
+curl -fsSL https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.7.tar.gz | tar xz
+cd aws-console-url-1.2.7
 ./install.sh
 ```
 
-Or grab the `.tar.gz` / `.zip` from the
-[Releases page](https://github.com/psantus/aws-console-url/releases).
-
-### Option B — clone the repo
+…or clone the repo:
 
 ```bash
 git clone https://github.com/psantus/aws-console-url.git
@@ -71,20 +81,24 @@ cd aws-console-url
 ./install.sh
 ```
 
-Either way, the installer copies `bin/console-url.sh` to
-`~/.aws/cli/console-url.sh` and registers the `console` and `console-url` aliases
-in `~/.aws/cli/alias` (preserving any aliases you already have).
-
-Verify:
+The installer copies `bin/console-url.sh` to `~/.aws/cli/console-url.sh` and
+registers the `console` / `console-url` aliases in `~/.aws/cli/alias` (existing
+aliases are preserved). Verify:
 
 ```bash
 aws console <your-profile> --print
 ```
 
-### Windows (PowerShell)
+</details>
 
-On Windows, use the PowerShell port. In a PowerShell session, paste these lines
-(each command is complete on its own line, which pastes reliably into a console):
+<details>
+<summary><b>🪟 Windows (PowerShell)</b></summary>
+
+**Requirements:** AWS CLI v2 and Windows PowerShell 5.1+ (both present by default
+on modern Windows).
+
+In a PowerShell session, paste these lines (each is complete on its own line, so
+it pastes reliably into a console):
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -103,9 +117,6 @@ aws console <your-profile> --print
 aws console <your-profile> ec2
 ```
 
-Requirements on Windows: AWS CLI v2 and Windows PowerShell 5.1+ (both present by
-default on modern Windows). Credentials are still fully delegated to the AWS CLI.
-
 **Tab-completion:** `aws console` itself can't be completed (the AWS CLI treats
 alias arguments as opaque). The installer therefore also adds an `awsc` function
 to your `$PROFILE` that *is* completable (`ac` is a reserved PowerShell alias for
@@ -116,6 +127,11 @@ awsc <TAB>              # completes profile names
 awsc myprofile <TAB>    # completes service names
 awsc myprofile ec2      # same behaviour as `aws console myprofile ec2`
 ```
+
+</details>
+
+Credentials are always delegated to the AWS CLI — see
+[How credentials flow](#how-credentials-flow).
 
 ## Usage
 
