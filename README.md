@@ -68,8 +68,8 @@ Pick your platform below. Whichever you choose, the installer registers an
 Download a release (no git needed):
 
 ```bash
-curl -fsSL https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.7.tar.gz | tar xz
-cd aws-console-url-1.2.7
+curl -fsSL https://github.com/psantus/aws-console-url/archive/refs/tags/v1.3.0.tar.gz | tar xz
+cd aws-console-url-1.3.0
 ./install.sh
 ```
 
@@ -104,10 +104,10 @@ it pastes reliably into a console):
 $ErrorActionPreference = 'Stop'
 $zip = "$env:TEMP\acu.zip"
 $dir = "$env:TEMP\acu"
-Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.2.7.zip -OutFile $zip
+Invoke-WebRequest https://github.com/psantus/aws-console-url/archive/refs/tags/v1.3.0.zip -OutFile $zip
 Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
 Expand-Archive $zip $dir -Force
-& "$dir\aws-console-url-1.2.7\install.ps1"
+& "$dir\aws-console-url-1.3.0\install.ps1"
 ```
 
 Then use it exactly like on macOS/Linux:
