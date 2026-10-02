@@ -16,7 +16,7 @@
 
 .PARAMETER Service
     Optional service to deep-link into (e.g. ec2, s3, lambda, rds). Most map to
-    /<service>/home; s3/iam/route53/billing are global; stepfunctions -> states.
+    the console resolves the destination server-side; unknown services open the console home.
 
 .PARAMETER Print
     Print the URL instead of opening a browser.
@@ -97,18 +97,12 @@ if ($AccountId -eq "None") { $AccountId = "" }
 
 # Build the destination.
 if (-not $Destination) {
-    $global = $false
     if ($Service) {
-        switch ($Service) {
-            "s3"            { $svcPath = "s3";          $global = $true }
-            "iam"           { $svcPath = "iam";         $global = $true }
-            { $_ -in "route53","r53" } { $svcPath = "route53/v2"; $global = $true }
-            { $_ -in "billing","cost" } { $svcPath = "billing";  $global = $true }
-            { $_ -in "stepfunctions","sfn" } { $svcPath = "states" }
-            default         { $svcPath = $Service }
-        }
-        if ($global) { $base = "https://console.aws.amazon.com/$svcPath/home" }
-        else         { $base = "https://$Region.console.aws.amazon.com/$svcPath/home?region=$Region" }
+        # The console's /go/view endpoint resolves the correct destination for
+        # a service server-side (regional vs global, slug differences such as
+        # stepfunctions -> states, and an unknown service falls back to the
+        # console home). This avoids maintaining a service-to-path map here.
+        $base = "https://$Region.console.aws.amazon.com/go/view?service=$Service&region=$Region"
     }
     else {
         $base = "https://$Region.console.aws.amazon.com/console/home?region=$Region"

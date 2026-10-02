@@ -145,8 +145,9 @@ Arguments:
 Options:
   --service <name> Service to deep-link into (ec2, lambda, s3, rds, dynamodb, iam,
                    vpc, ecs, cloudformation, cloudwatch, sns, sqs, stepfunctions, …).
-                   Most map to /<service>/home; s3/iam/route53/billing are global and
-                   stepfunctions maps to /states. Use --destination for anything else.
+                   The console resolves the destination server-side (via
+                   `console.aws.amazon.com/go/view`); an unknown service opens the
+                   console home. Use --destination for an exact URL.
   --print          Print the URL instead of opening a browser.
   --browser <app>  Browser to open in. macOS: an app name ("Safari",
                    "Google Chrome"); Linux: a command on PATH ("firefox").

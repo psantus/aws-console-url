@@ -44,8 +44,8 @@ fi
 
 echo "6) service deep-link (positional + --service)"
 surl="$(bash "$SCRIPT" "$PROFILE" ec2 --print)"
-echo "$surl" | grep -q 'ec2%2Fhome' && pass "positional service -> /ec2/home" || fail "service deep-link not applied (positional)"
+echo "$surl" | grep -q 'go%2Fview%3Fservice%3Dec2' && pass "positional service -> /go/view?service=ec2" || fail "service deep-link not applied (positional)"
 surl2="$(bash "$SCRIPT" "$PROFILE" --service lambda --print)"
-echo "$surl2" | grep -q 'lambda%2Fhome' && pass "--service lambda -> /lambda/home" || fail "service deep-link not applied (--service)"
+echo "$surl2" | grep -q 'go%2Fview%3Fservice%3Dlambda' && pass "--service lambda -> /go/view?service=lambda" || fail "service deep-link not applied (--service)"
 
 echo "All checks completed."

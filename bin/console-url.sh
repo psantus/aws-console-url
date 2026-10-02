@@ -16,8 +16,8 @@
 #   [service]       Optional 2nd positional: open a service deep-link instead of the
 #                   console home, e.g. `console-url myprofile ec2`. Same as --service.
 #   --service       Service to deep-link into (e.g. ec2, lambda, s3, rds, dynamodb).
-#                   Most services resolve to /<service>/home; a few special cases are
-#                   mapped (s3, iam, stepfunctions). Use --destination for anything else.
+#                   The console resolves the destination for the service (an unknown
+#                   service opens the console home). Use --destination for an exact URL.
 #   --print         Print the URL instead of opening a browser.
 #   --browser       Browser app to open the URL in. On macOS this is an app name
 #                   (e.g. "Google Chrome", "Safari", "Firefox"); on Linux it is a
@@ -86,24 +86,13 @@ ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account -
 [[ "$ACCOUNT_ID" == "None" ]] && ACCOUNT_ID=""
 
 if [[ -z "$DESTINATION" ]]; then
-  # Resolve the console path for the requested service (if any).
-  #  - most services live at /<service>/home?region=<r>
-  #  - a few use a different console slug or are global (region-less)
-  GLOBAL=0
+  # Build the post-sign-in destination.
   if [[ -n "$SERVICE" ]]; then
-    case "$SERVICE" in
-      s3)             SVC_PATH="s3"; GLOBAL=1 ;;              # S3 console is global
-      iam)            SVC_PATH="iam"; GLOBAL=1 ;;             # IAM is global
-      route53|r53)    SVC_PATH="route53/v2"; GLOBAL=1 ;;      # Route 53 is global
-      billing|cost)   SVC_PATH="billing"; GLOBAL=1 ;;
-      stepfunctions|sfn) SVC_PATH="states" ;;                # Step Functions -> states
-      *)              SVC_PATH="$SERVICE" ;;                  # generic: /<service>/home
-    esac
-    if [[ "$GLOBAL" -eq 1 ]]; then
-      BASE="https://console.aws.amazon.com/${SVC_PATH}/home"
-    else
-      BASE="https://${REGION}.console.aws.amazon.com/${SVC_PATH}/home?region=${REGION}"
-    fi
+    # The console's /go/view endpoint resolves the correct destination for a
+    # service server-side (regional vs global, slug differences such as
+    # stepfunctions -> states, and an unknown service falls back to the
+    # console home). This avoids maintaining a service-to-path map here.
+    BASE="https://${REGION}.console.aws.amazon.com/go/view?service=${SERVICE}&region=${REGION}"
   else
     BASE="https://${REGION}.console.aws.amazon.com/console/home?region=${REGION}"
   fi
